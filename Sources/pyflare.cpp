@@ -7,10 +7,7 @@
 #include "Environment/py_local_environment.h"
 
 PYBIND11_MODULE(_C_flare, m) {
-  AddDescriptorModule(m);
   AddStructureModule(m);
-  AddParametersModule(m);
-  AddLocalEnvironmentModule(m);
 }
 
 #endif
