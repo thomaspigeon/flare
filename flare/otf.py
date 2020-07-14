@@ -11,7 +11,6 @@ import flare.predict as predict
 from flare import struc, gp, env, md
 from flare.dft_interface import dft_software
 from flare.output import Output
-from flare.parameters import Parameters
 from flare.utils.learner import is_std_in_bound
 
 
@@ -130,6 +129,10 @@ class OTF:
         positions, species, cell, masses = \
             self.dft_module.parse_dft_input(self.dft_input)
 
+        # Set previous positions to positions if none are given.
+        if prev_pos_init is None:
+            prev_pos_init = positions
+
         self.structure = struc.Structure(
             cell=cell, species=species, positions=positions, mass_dict=masses,
             prev_positions=prev_pos_init, species_labels=species)
@@ -225,10 +228,8 @@ class OTF:
                 self.compute_properties()
 
                 # get max uncertainty atoms
-                noise_sig = Parameters.get_noise(
-                        self.gp.hyps_mask, self.gp.hyps, constraint=False)
                 std_in_bound, target_atoms = is_std_in_bound(
-                    self.std_tolerance, noise_sig, self.structure,
+                    self.std_tolerance, self.gp.hyps[-1], self.structure,
                     self.max_atoms_added)
 
                 if not std_in_bound:
@@ -358,13 +359,8 @@ class OTF:
     def train_gp(self):
         """Optimizes the hyperparameters of the current GP model."""
 
-        self.gp.train(logger_name=self.output.basename+'hyps')
-        hyps, labels = Parameters.get_hyps(
-                self.gp.hyps_mask, self.gp.hyps, constraint=False,
-                label=True)
-        if labels is None:
-            labels = self.gp.hyp_labels
-        self.output.write_hyps(labels, hyps,
+        self.gp.train()
+        self.output.write_hyps(self.gp.hyp_labels, self.gp.hyps,
                                self.start_time,
                                self.gp.likelihood, self.gp.likelihood_gradient,
                                hyps_mask=self.gp.hyps_mask)
