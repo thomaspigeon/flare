@@ -92,22 +92,10 @@ target_compile_options(pybind11 INTERFACE "-fvisibility=hidden")
 
 # Specify source files.
 set(FLARE_SOURCES
-    Sources/Descriptor/y_grad.cpp
-    Sources/Descriptor/radial.cpp
-    Sources/Descriptor/cutoffs.cpp
-    Sources/Descriptor/single_bond.cpp
-    Sources/Descriptor/descriptor.cpp
-    Sources/Structure/structure.cpp
-    Sources/Environment/local_environment.cpp
-    Sources/Kernels/kernels.cpp
-    Sources/Sparse_GP/sparse_gp.cpp
-    Sources/Parameters/hyps_mask.cpp)
+    Sources/Structure/structure.cpp)
 
 set(PYBIND_SOURCES
-    Sources/Descriptor/py_descriptor.cpp
     Sources/Structure/py_structure.cpp
-    Sources/Parameters/py_hyps_mask.cpp
-    Sources/Environment/py_local_environment.cpp
     Sources/pyflare.cpp)
 
 # Include sources.
