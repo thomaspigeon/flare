@@ -2,6 +2,8 @@ import numpy as np
 import time
 import os
 from flare import gp, struc, predict
+from flare.ase import calculator
+from flare.ase.atoms import FLARE_Atoms
 import multiprocessing as mp
 
 # Load AgI data.
@@ -34,7 +36,10 @@ gp_model = gp.GaussianProcess(
   maxiter=50
 )
 
-# put a few snapshots in the training set
+# Create FLARE calculator.
+flare_calc = calculator.FLARE_Calculator(gp_model, par=True)
+
+# Put a few snapshots in the training set.
 snapshots = [500, 1500]
 for snapshot in snapshots:
     # create flare structure
@@ -88,3 +93,14 @@ time2 = time.time()
 par_efs = time2 - time1
 
 print(par_efs)
+
+# Predict with calculator.
+atoms = validation_structure.to_ase_atoms()
+flare_atoms = FLARE_Atoms.from_ase_atoms(atoms)
+flare_atoms.calc = flare_calc
+time1 = time.time()
+flare_atoms.get_forces()
+time2 = time.time()
+calc_efs = time2 - time1
+
+print(calc_efs)
