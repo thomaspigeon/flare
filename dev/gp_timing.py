@@ -5,6 +5,9 @@ from flare import gp, struc, predict
 from flare.ase import calculator
 from flare.ase.atoms import FLARE_Atoms
 import multiprocessing as mp
+from ase.md.verlet import VelocityVerlet
+from ase import units
+
 
 # Load AgI data.
 AgI_location = "https://zenodo.org/record/3688843/files/AgI_data.zip?download=1"
@@ -104,3 +107,18 @@ time2 = time.time()
 calc_efs = time2 - time1
 
 print(calc_efs)
+
+# Take MD step with Velocity Verlet engine.
+md_engine = VelocityVerlet(
+    atoms=flare_atoms,
+    timestep=1.0 * units.fs,
+    )
+
+time1 = time.time()
+flare_calc.reset()
+flare_atoms.calc = flare_calc
+md_engine.step()
+time2 = time.time()
+md_step = time2 - time1
+
+print(md_step)
