@@ -135,6 +135,7 @@ class OTF:
         store_dft_output: Tuple[Union[str, List[str]], str] = None,
         # other args
         n_cpus: int = 1,
+        profile=False,
         **kwargs,
     ):
 
@@ -185,6 +186,7 @@ class OTF:
 
         self.dft_kwargs = dft_kwargs
         self.store_dft_output = store_dft_output
+        self.profile = profile
 
         # other args
         self.atom_list = list(range(self.noa))
@@ -243,6 +245,9 @@ class OTF:
         self.start_time = time.time()
 
         while self.curr_step < self.number_of_steps:
+            # Initialize profiling times.
+            time1 = time2 = time3 = time4 = time5 = time6 = time7 = time8 = 0
+
             # run DFT and train initial model if first step and DFT is on
             if (
                 (self.curr_step == 0)
@@ -258,8 +263,10 @@ class OTF:
             # after step 1, try predicting with GP model
             else:
                 # compute forces and stds with GP
+                time1 = time.time()
                 self.dft_step = False
                 self.compute_properties()
+                time2 = time.time()
 
                 # get max uncertainty atoms
                 std_in_bound, target_atoms = is_std_in_bound(
@@ -270,6 +277,7 @@ class OTF:
                     update_style=self.update_style,
                     update_threshold=self.update_threshold,
                 )
+                time3 = time.time()
 
                 steps_since_dft = self.curr_step - self.last_dft_step
                 if (not std_in_bound) and (steps_since_dft > self.min_steps_with_model):
@@ -318,19 +326,43 @@ class OTF:
                         self.checkpoint()
                         self.backup_checkpoint()
 
+                time4 = time.time()
+
             # write gp forces
+            time5 = time.time()
             if counter >= self.skip and not self.dft_step:
                 self.update_temperature()
                 self.record_state()
                 counter = 0
+            time6 = time.time()
 
             counter += 1
             # TODO: Reinstate velocity rescaling.
             self.md_step()  # update positions by Verlet
             self.rescale_temperature(self.structure.positions)
+            time7 = time.time()
 
             if self.write_model == 3:
                 self.checkpoint()
+            time8 = time.time()
+
+            # Record profile times.
+            compute_properties_time = time2 - time1
+            std_in_bound_time = time3 - time2
+            update_time = time4 - time3
+            record_time = time6 - time5
+            md_step_time = time7 - time6
+            checkpoint_time = time8 - time7
+
+            if self.profile:
+                self.output.write_timing_data(
+                    compute_properties_time,
+                    std_in_bound_time,
+                    update_time,
+                    record_time,
+                    md_step_time,
+                    checkpoint_time,
+                )
 
         self.output.conclude_run()
 
@@ -490,13 +522,7 @@ class OTF:
         )
 
     def compute_mae(
-        self,
-        gp_energy,
-        gp_forces,
-        gp_stress,
-        dft_energy,
-        dft_forces,
-        dft_stress,
+        self, gp_energy, gp_forces, gp_stress, dft_energy, dft_forces, dft_stress,
     ):
 
         f = logging.getLogger(self.output.basename + "log")

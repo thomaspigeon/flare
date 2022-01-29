@@ -262,6 +262,31 @@ class Output:
         string += f"\nSimulation Time: {(dt * curr_step):10.3f} ps \n"
         return string
 
+    def write_timing_data(
+        self,
+        compute_properties_time,
+        std_in_bound_time,
+        update_time,
+        record_time,
+        md_step_time,
+        checkpoint_time,
+    ):
+
+        string = "\n"
+        string += "Timing information:\n"
+        string += "Property calculation: %.2f s\n" % compute_properties_time
+        string += "STD in bound: %.2f s\n" % std_in_bound_time
+        string += "Model update: %.2f s\n" % update_time
+        string += "File output: %.2f s\n" % record_time
+        string += "MD step: %.2f s\n" % md_step_time
+        string += "Checkpoint: %.2f s\n" % checkpoint_time
+
+        logger = logging.getLogger(self.basename + "log")
+        logger.info(string)
+
+        if self.always_flush:
+            logger.handlers[0].flush()
+
     def write_md_config(
         self,
         dt,
