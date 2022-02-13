@@ -72,7 +72,7 @@ for snapshot in snapshots:
     training_structure = struc.Structure(cell, species, training_positions)
 
     # add the structure to the training set of the GP
-    gp_model.update_db(training_structure, training_forces)
+    gp_model.update_db(training_structure, training_forces, custom_range=[0])
 
 gp_model.set_L_alpha()
 
