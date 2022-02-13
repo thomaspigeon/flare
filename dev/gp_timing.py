@@ -7,22 +7,57 @@ from flare.ase.atoms import FLARE_Atoms
 import multiprocessing as mp
 from ase.md.verlet import VelocityVerlet
 from ase import units
+from ase.build import bulk
+from ase.build import make_supercell
+from ase.calculators.eam import EAM
+from numpy.random import rand
 
 
-# Load AgI data.
-AgI_location = "https://zenodo.org/record/3688843/files/AgI_data.zip?download=1"
-wget_return = os.system("wget %s" % AgI_location)
-# For Macs:
+# # Load AgI data.
+# AgI_location = "https://zenodo.org/record/3688843/files/AgI_data.zip?download=1"
+# wget_return = os.system("wget %s" % AgI_location)
+# # For Macs:
+# if wget_return != 0:
+#     os.system("curl %s -o AgI_data.zip?download=1" % AgI_location)
+# os.system("unzip -o AgI_data.zip?download=1")
+
+# # Load AIMD training data.
+# data_directory = 'AgI_data/'
+# species = np.load(data_directory + 'species.npy')  # atomic numbers of the atoms
+# positions = np.load(data_directory + 'positions.npy')  # in angstrom (A)
+# cell = np.load(data_directory + 'cell.npy')  # 3x3 array of cell vectors (in A)
+# forces = np.load(data_directory + 'forces.npy')  # in eV/A
+
+# Download an aluminum EAM potential from the NIST potential database.
+eam_loc = "https://www.ctcms.nist.gov/potentials/Download/1999--Mishin-Y-Farkas-D-Mehl-M-J-Papaconstantopoulos-D-A--Al/2/Al99.eam.alloy"
+wget_return = os.system("wget %s" % eam_loc)
 if wget_return != 0:
-    os.system("curl %s -o AgI_data.zip?download=1" % AgI_location)
-os.system("unzip -o AgI_data.zip?download=1")
+    os.system("curl %s -o Al99.eam.alloy" % eam_loc)
+eam_potential = EAM(potential="Al99.eam.alloy")
 
-# Load AIMD training data.
-data_directory = 'AgI_data/'
-species = np.load(data_directory + 'species.npy')  # atomic numbers of the atoms
-positions = np.load(data_directory + 'positions.npy')  # in angstrom (A)
-cell = np.load(data_directory + 'cell.npy')  # 3x3 array of cell vectors (in A)
-forces = np.load(data_directory + 'forces.npy')  # in eV/A
+# Generate aluminum data.
+a = 4.0
+cell_ase = bulk('Al', 'fcc', a=a, cubic=True)
+size = 2
+P = [(size, 0, 0), (0, size, 0), (0, 0, size)]
+super_cell = make_supercell(cell_ase, P)
+super_cell.calc = eam_potential
+pos = np.copy(super_cell.positions)
+
+n_strucs = 10
+n_atoms = len(super_cell)
+species = [13] * n_atoms
+jit_size = 0.1
+positions = np.zeros((n_strucs, n_atoms, 3))
+forces = np.zeros((n_strucs, n_atoms, 3))
+cell = np.array(super_cell.cell)
+print(cell)
+for n in range(n_strucs):
+    rand_jit = (rand(n_atoms, 3) * 2 - 1) * jit_size
+    pos_curr = pos + rand_jit 
+    super_cell.positions = pos_curr
+    positions[n] = pos_curr
+    forces[n] = super_cell.get_forces()
 
 # Create a 2+3-body Gaussian process.
 kernels = ['twobody', 'threebody']
@@ -43,7 +78,8 @@ gp_model = gp.GaussianProcess(
 flare_calc = calculator.FLARE_Calculator(gp_model, par=True)
 
 # Put a few snapshots in the training set.
-snapshots = [500, 1500]
+# snapshots = [500, 1500]
+snapshots = [5]
 for snapshot in snapshots:
     # create flare structure
     training_positions = positions[snapshot]
@@ -51,12 +87,12 @@ for snapshot in snapshots:
     training_structure = struc.Structure(cell, species, training_positions)
 
     # add the structure to the training set of the GP
-    gp_model.update_db(training_structure, training_forces)
+    gp_model.update_db(training_structure, training_forces, custom_range=[0])
 
 gp_model.set_L_alpha()
 
 # Create a validation structure.
-validation_snapshot = 2300
+validation_snapshot = 6
 validation_positions = positions[validation_snapshot]
 validation_forces = forces[validation_snapshot]
 validation_structure = struc.Structure(cell, species, validation_positions)

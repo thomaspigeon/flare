@@ -53,3 +53,4 @@ test_files/qe_output_*.out
 .idea/
 .coverage
 AgI_data*
+Al99*
