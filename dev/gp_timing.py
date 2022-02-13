@@ -13,21 +13,6 @@ from ase.calculators.eam import EAM
 from numpy.random import rand
 
 
-# # Load AgI data.
-# AgI_location = "https://zenodo.org/record/3688843/files/AgI_data.zip?download=1"
-# wget_return = os.system("wget %s" % AgI_location)
-# # For Macs:
-# if wget_return != 0:
-#     os.system("curl %s -o AgI_data.zip?download=1" % AgI_location)
-# os.system("unzip -o AgI_data.zip?download=1")
-
-# # Load AIMD training data.
-# data_directory = 'AgI_data/'
-# species = np.load(data_directory + 'species.npy')  # atomic numbers of the atoms
-# positions = np.load(data_directory + 'positions.npy')  # in angstrom (A)
-# cell = np.load(data_directory + 'cell.npy')  # 3x3 array of cell vectors (in A)
-# forces = np.load(data_directory + 'forces.npy')  # in eV/A
-
 # Download an aluminum EAM potential from the NIST potential database.
 eam_loc = "https://www.ctcms.nist.gov/potentials/Download/1999--Mishin-Y-Farkas-D-Mehl-M-J-Papaconstantopoulos-D-A--Al/2/Al99.eam.alloy"
 wget_return = os.system("wget %s" % eam_loc)
@@ -87,7 +72,7 @@ for snapshot in snapshots:
     training_structure = struc.Structure(cell, species, training_positions)
 
     # add the structure to the training set of the GP
-    gp_model.update_db(training_structure, training_forces, custom_range=[0])
+    gp_model.update_db(training_structure, training_forces)
 
 gp_model.set_L_alpha()
 
