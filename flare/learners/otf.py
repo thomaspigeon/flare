@@ -209,6 +209,10 @@ class OTF:
         self.rescale_steps = rescale_steps
         self.rescale_temps = rescale_temps
 
+        # set parameters for ams
+        self.nsteps = self.md.nsteps
+        self.observers = self.md.observers
+
         # set flare
         self.gp = self.flare_calc.gp_model
         self.force_only = force_only
@@ -296,7 +300,31 @@ class OTF:
         if wandb_log is not None:
             wandb.init(project=wandb_log)
 
-    def run(self):
+    def closelater(self, trajectory):
+        """
+        Open trajectory file to be closed later once trajectory is finished
+        """
+        return self.md.closelater(trajectory)
+
+    def attach(self, traj_writer, interval):
+        """
+        Attach a trajectory writer to the otf (called every steps)
+        """
+        self.md.attach(traj_writer, interval=interval)
+
+    def call_observers(self):
+        """
+        Call the observers ob the trajectory, (traj writer)
+        """
+        self.md.call_observers()
+
+    def close(self):
+        """
+        close the things open with closelater
+        """
+        self.md.close()
+
+    def run(self, nsteps):
         """
         Performs an on-the-fly training run.
 
@@ -318,7 +346,7 @@ class OTF:
         counter = 0
         self.start_time = time.time()
 
-        while self.curr_step < self.number_of_steps:
+        while self.curr_step < nsteps:
             # run DFT and train initial model if first step and DFT is on
             if (
                 (self.curr_step == 0)
@@ -439,7 +467,9 @@ class OTF:
             counter += 1
             # TODO: Reinstate velocity rescaling.
             try:
-                self.md_step()  # update positions by Verlet
+                self.md_step()  # update positions
+                self.call_observers()
+                self.nsteps += 1
             except StopIteration:
                 break
 
