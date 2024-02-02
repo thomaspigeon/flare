@@ -896,6 +896,10 @@ class OTF:
         dft_calc = self.dft_calc
         self.dft_calc = None
 
+        # the md oberservers are not pickable, Temporarily set to None before copying
+        observers = self.observers
+        self.observers = None
+
         # Deepcopy OTF object.
         dct = deepcopy(dict(vars(self)))
 
@@ -906,6 +910,7 @@ class OTF:
         self.gp = gp
         self.atoms.calc = flare_calc
         self.dft_calc = dft_calc
+        self.observers = observers
 
         # write atoms and flare calculator to separate files
         write(self.atoms_name, self.atoms)
