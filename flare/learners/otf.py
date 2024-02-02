@@ -273,7 +273,7 @@ class OTF:
             )
 
         # set logger
-        self.output = Output(output_name, always_flush=True, print_as_xyz=True)
+        self.output = Output(output_name, always_flush=True, print_as_xyz=False)
         self.output_name = output_name
 
         self.checkpt_name = self.output_name + "_checkpt.json"
